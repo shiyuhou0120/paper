@@ -1,0 +1,64 @@
+1. 程式使用順序:先跑 Function.R ，再跑真實值計算.R ，最後即可開始平行運算
+
+2. function.R 中，分別有修正前與修正後計算AUC的函數
+
+3.平行運算的操作在 平行運算_半參數_wei_PH.R 中有說明
+
+4. AUC與一致性指標( Concordance )分析程式：
+
+MyrisksetAUC.wai( Stime , entry = NULL, status, marker, method 
+                , tmax , AFT.method.1 = "1",AFT.method.2 = "1"
+                , bw.1="opt",bw.2="opt", bw.mul.1=5,bw.mul.2=5,hazard.est = NULL
+                , CI=F, confi=0.95, weight = "rescale"
+                , plot=TRUE, type="l",xlab="Time", ylab="AUC", xlim=c(0, 7))
+
+MyrisksetAUC.wai.new 為修正過後的計算函數，所帶入的參數與上方一致
+
+程式概述：
+此函數參考 Heagerty, P.J. and Zheng, Y. (2005) 針對 Cox 模型估計時間相依 AUC 與一致性指標(Concordance)的方法。
+可使用 Cox、AFT 或 PO 模型估計時間相依 AUC 與一致性指標。並利用大樣本理論估計 AUC 與一致性指標的信賴區間。
+
+輸入值介紹：
+  # Stime: 受試者觀測時間
+  # entry: 受試者進入試驗時間
+  # status: 受試者設限指標
+  # marker: 模型分數，即共變數以迴歸係數加權總和
+  # method: 選擇模型 (Cox、AFT、PO)，預設為 Cox
+  # tmax:  估計 Concordance 的最大時間範圍
+
+###### 選擇 AFT 模型分析注意事項 #####
+  # 若使用 AFT 模型分析，使用的基線風險估計方法，"1":Zeng.2007，"2":2019方法，"3":自行輸入基線風險估計
+  # AFT.method.1: 點估計方法選擇
+  # AFT.method.2: 區間估計方法選擇 
+  # Zeng.2007 需要給定帶寬 bw.1、bw.2 預設為"opt"，可設定"opt"、"1/2"、"1/5"、"1/7"、"1/9"
+  # 2019 方法需要給定帶寬 bw.mul.1、bw.mul.2，預設為 5
+  # hazard.est: 自行輸入基線風險估計，資料型態為 data.frame(time = time,haz.est = haz.est)，其中時間變數名稱需為 time，風險變數名稱為 haz.est
+  # CI:是否需要區間估計，T 為需要，F 為不需要
+  # confi: 信賴區間信心水準，預設為 0.95
+  # weight: 一致性指標加權方式，可選 "rescale"、"conditional" 
+###### 畫出時間相依AUC變化趨勢  ######
+  # plot: 是否需要劃出 AUC 變化趨勢
+  # type: AUC 曲線型態
+  # xlab: x座標軸名稱
+  # ylab: y座標軸名稱
+  # xlim: x座標軸範圍
+
+輸出值介紹：
+  # utimes: 未設限事件發生時間(照時間排序)
+  # St: K-M 方法估計的存活機率
+  # AUC: 時間相依 AUC 估計值，對應 utimes
+  # AUC_std: 時間相依 AUC 標準差估計值，時間對應 utimes
+  # AUC_confi: 時間相依 AUC 信賴區間估計，時間對應 utimes
+  # Cindex: 一致性指標 (Concordance) 估計值
+  # Cindex_std: 一致性指標 (Concordance) 標準差估計值
+  # Cindex_confi: 一致性指標 (Concordance) 信賴區間估計
+
+**注意事項：
+  1) tmax 不可小於最後一位受試者進入試驗時間
+  2) 若分析時間相依共變數資料，選擇 AFT 模型分析時，AFT.method.1 與 AFT.method.2 皆需選擇 "3"，並輸入事先估計好的基線風險。
+  3) 此模型 marker 需事先以選擇的模型估計出其迴歸係數後加總，以下為三種模型 R 套件估計參數：
+     Cox： coxph(Surv(Stime,status)~X)$coefficients
+     AFT： -aftsrr(Surv(Stime,status)~X)$beta                         
+     PO ： data = data.frame(Stime=Stime,status = status,X = X)
+           as.numeric(prop.odds(Event(Stime,status)~X,data)$gamma)
+
